@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { Chess } from "chess.js";
 
-const STOCKFISH_PATH = process.env.STOCKFISH_PATH || "stockfish";
+const STOCKFISH_PATH = process.env.STOCKFISH_PATH || "/usr/games/stockfish";
 const ENGINE_DEPTH = Number(process.env.STOCKFISH_DEPTH || 10);
 
 function fallbackMove(fen) {
