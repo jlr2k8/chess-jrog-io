@@ -1,0 +1,161 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  chess.jrog.io — Node/React chess app on App Runner with ECR and custom domain DNS.
+
+Parameters:
+  HostedZoneId:
+    Type: String
+    Description: Route53 hosted zone ID for jrog.io
+
+  DomainName:
+    Type: String
+    Description: Public hostname (e.g. chess.jrog.io)
+
+  EcrRepositoryName:
+    Type: String
+    AllowedPattern: "^[a-z0-9][a-z0-9._/-]{1,248}[a-z0-9]$"
+    Description: ECR repository name created by this stack
+
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Image tag to deploy from ECR
+
+  DeployAppRunner:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Set to true after the container image exists in ECR
+
+  AppRunnerCustomDomainDnsTarget:
+    Type: String
+    Default: ""
+    Description: >
+      App Runner DnsTarget after linking the custom domain (e.g. abc123.us-west-2.awsapprunner.com)
+
+Conditions:
+  DeployAppRunner: !Equals [!Ref DeployAppRunner, "true"]
+  CreateCustomDomainRecord: !And
+    - !Condition DeployAppRunner
+    - !Not [!Equals [!Ref AppRunnerCustomDomainDnsTarget, ""]]
+
+Resources:
+  ChessRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref EcrRepositoryName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": { "type": "expire" }
+              }
+            ]
+          }
+
+  AppRunnerEcrAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AWS::StackName}-apprunner-ecr-access"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+
+  AppRunnerAutoScaling:
+    Type: AWS::AppRunner::AutoScalingConfiguration
+    Properties:
+      AutoScalingConfigurationName: !Sub "${AWS::StackName}-as"
+      MaxConcurrency: 80
+      MaxSize: 3
+      MinSize: 1
+
+  AppRunnerService:
+    Type: AWS::AppRunner::Service
+    Condition: DeployAppRunner
+    DependsOn: ChessRepository
+    Properties:
+      ServiceName: !Sub "${AWS::StackName}-chess"
+      AutoScalingConfigurationArn: !GetAtt AppRunnerAutoScaling.AutoScalingConfigurationArn
+      InstanceConfiguration:
+        Cpu: "0.25 vCPU"
+        Memory: "0.5 GB"
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /api/health
+        Interval: 10
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+      SourceConfiguration:
+        AutoDeploymentsEnabled: true
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt AppRunnerEcrAccessRole.Arn
+        ImageRepository:
+          ImageIdentifier: !Sub
+            - "${RepoUri}:${Tag}"
+            - RepoUri: !GetAtt ChessRepository.RepositoryUri
+              Tag: !Ref ImageTag
+          ImageRepositoryType: ECR
+          ImageConfiguration:
+            Port: "8080"
+            RuntimeEnvironmentVariables:
+              - Name: NODE_ENV
+                Value: production
+              - Name: PORT
+                Value: "8080"
+      Tags:
+        - Key: app
+          Value: chess-jrog-io
+
+  AppRunnerDomainRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: CreateCustomDomainRecord
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: CNAME
+      TTL: 300
+      ResourceRecords:
+        - !Ref AppRunnerCustomDomainDnsTarget
+
+Outputs:
+  EcrRepositoryUri:
+    Description: Push your image here
+    Value: !GetAtt ChessRepository.RepositoryUri
+
+  AppRunnerServiceUrl:
+    Condition: DeployAppRunner
+    Description: Default App Runner URL
+    Value: !GetAtt AppRunnerService.ServiceUrl
+
+  AppRunnerServiceArn:
+    Condition: DeployAppRunner
+    Value: !GetAtt AppRunnerService.ServiceArn
+
+  PublicUrl:
+    Condition: DeployAppRunner
+    Value: !Sub "https://${DomainName}"
+
+  CustomDomainSetup:
+    Condition: DeployAppRunner
+    Value: !Sub >-
+      App Runner → ${AWS::StackName}-chess → Custom domains → Link ${DomainName}.
+      Run scripts/ensure-custom-domain.sh to add ACM validation CNAMEs and update Route53.

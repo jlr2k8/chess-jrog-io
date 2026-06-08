@@ -1,0 +1,16 @@
+{
+  "name": "chess-net-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-route-53": "^3.1063.0",
+    "chess.js": "^1.4.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
