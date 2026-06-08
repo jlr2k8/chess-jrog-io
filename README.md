@@ -7,20 +7,16 @@ Play chess against the computer — React board + Node/Stockfish on App Runner.
 ```bash
 cd ~/chess-jrog-io
 npm install
-npm run dev
+npm start
 ```
 
-- **Board UI:** http://127.0.0.1:5173
-- **API:** http://127.0.0.1:3001/api/health
+- **Full app:** http://127.0.0.1:3001 (builds client + serves board + API)
 
-Use `npm run dev` — it starts both the Vite client and Express API. Port 3001 alone is API-only; visiting it redirects to the Vite dev server.
-
-Production-like local run:
+Hot reload during development:
 
 ```bash
-npm run build
-NODE_ENV=production PORT=3001 npm start
-# → http://127.0.0.1:3001
+npm run dev
+# Board UI: http://127.0.0.1:5173  (API proxied to :3001)
 ```
 
 ## Deploy

@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = Number(process.env.PORT || 3001);
 const isProduction = process.env.NODE_ENV === "production";
+const clientDist = path.resolve(__dirname, "../../client/dist");
 const clientDevUrl = process.env.CLIENT_DEV_URL || "http://127.0.0.1:5173";
 
 app.use(cors());
@@ -51,25 +52,27 @@ app.post("/api/move", async (req, res) => {
 });
 
 if (isProduction) {
-  const clientDist = path.resolve(__dirname, "../../client/dist");
   app.use(express.static(clientDist));
   app.get(/.*/, (_req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });
 } else {
   app.get("/", (_req, res) => {
-    res.redirect(302, clientDevUrl);
-  });
-
-  app.get(/.*/, (req, res, next) => {
-    if (req.path.startsWith("/api")) return next();
-    res.redirect(302, `${clientDevUrl}${req.path}`);
+    res.type("html").send(`<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8"><title>chess.jrog.io</title></head>
+  <body style="font-family: system-ui, sans-serif; padding: 2rem;">
+    <h1>Chess dev server</h1>
+    <p>API is running on port ${port}. Open the board UI at <a href="${clientDevUrl}">${clientDevUrl}</a>.</p>
+    <p>Or run <code>npm start</code> for a single-port local build at <a href="http://127.0.0.1:${port}">http://127.0.0.1:${port}</a>.</p>
+  </body>
+</html>`);
   });
 }
 
 app.listen(port, () => {
   console.log(`chess-net server listening on http://127.0.0.1:${port}`);
   if (!isProduction) {
-    console.log(`Open the board at ${clientDevUrl} (run: npm run dev)`);
+    console.log(`Dev UI: ${clientDevUrl} (npm run dev) — or npm start for http://127.0.0.1:${port}`);
   }
 });

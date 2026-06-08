@@ -3,7 +3,8 @@ import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import "./App.css";
 
-function statusMessage(game, side, thinking) {
+function statusMessage(game, side, thinking, error) {
+  if (error) return error;
   if (thinking) return "Computer is thinking…";
   if (game.isCheckmate()) {
     return game.turn() === side ? "Checkmate — you lose." : "Checkmate — you win!";
@@ -18,14 +19,16 @@ export default function App() {
   const [game, setGame] = useState(() => new Chess());
   const [moveFrom, setMoveFrom] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [error, setError] = useState("");
+  const pendingFenRef = useRef("");
   const boardPanelRef = useRef(null);
   const [boardWidth, setBoardWidth] = useState(480);
   const playerColor = "w";
 
   const fen = game.fen();
   const status = useMemo(
-    () => statusMessage(game, playerColor, thinking),
-    [game, playerColor, thinking],
+    () => statusMessage(game, playerColor, thinking, error),
+    [game, playerColor, thinking, error],
   );
 
   useEffect(() => {
@@ -44,20 +47,34 @@ export default function App() {
   }, []);
 
   const requestComputerMove = useCallback(async (nextFen) => {
+    pendingFenRef.current = nextFen;
     setThinking(true);
+    setError("");
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     try {
       const res = await fetch("/api/move", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fen: nextFen }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Computer move failed.");
 
       setGame(new Chess(data.fen));
+      pendingFenRef.current = "";
     } catch (err) {
+      const message =
+        err.name === "AbortError"
+          ? "Computer took too long — tap Retry."
+          : err.message || "Computer move failed — tap Retry.";
+      setError(message);
       console.error(err);
     } finally {
+      clearTimeout(timeout);
       setThinking(false);
     }
   }, []);
@@ -66,6 +83,7 @@ export default function App() {
     (next) => {
       setGame(next);
       setMoveFrom("");
+      setError("");
       if (!next.isGameOver() && next.turn() !== playerColor) {
         requestComputerMove(next.fen());
       }
@@ -77,6 +95,14 @@ export default function App() {
     setGame(new Chess());
     setMoveFrom("");
     setThinking(false);
+    setError("");
+    pendingFenRef.current = "";
+  }
+
+  function retryComputerMove() {
+    if (pendingFenRef.current) {
+      requestComputerMove(pendingFenRef.current);
+    }
   }
 
   function onSquareClick(square) {
@@ -139,9 +165,16 @@ export default function App() {
           <h1>Chess</h1>
           <p className="lede">Play white against the computer.</p>
         </div>
-        <button type="button" className="reset" onClick={resetGame} disabled={thinking}>
-          New game
-        </button>
+        <div className="header-actions">
+          {error ? (
+            <button type="button" className="reset" onClick={retryComputerMove} disabled={thinking}>
+              Retry
+            </button>
+          ) : null}
+          <button type="button" className="reset" onClick={resetGame} disabled={thinking}>
+            New game
+          </button>
+        </div>
       </header>
 
       <main className="layout">
@@ -156,13 +189,14 @@ export default function App() {
             boardOrientation="white"
             animationDuration={200}
             arePiecesDraggable={canInteract}
+            autoPromoteToQueen
           />
         </section>
 
         <aside className="sidebar">
           <div className="card">
             <h2>Status</h2>
-            <p className="status">{status}</p>
+            <p className={`status${error ? " status-error" : ""}`}>{status}</p>
           </div>
 
           <div className="card">
