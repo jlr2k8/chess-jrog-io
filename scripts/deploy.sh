@@ -43,6 +43,11 @@ echo "==> Docker build & push ($REPO_URI:$IMAGE_TAG)"
 docker build -t "$REPO_URI:$IMAGE_TAG" .
 docker push "$REPO_URI:$IMAGE_TAG"
 
+if [[ "${PUSH_ONLY:-}" == "1" ]]; then
+  echo "==> Push only — App Runner auto-deploys :latest (skip CloudFormation phase 2)"
+  exit 0
+fi
+
 echo "==> Phase 2: enable App Runner"
 EXTRA_PARAMS=()
 if [[ -n "${APP_RUNNER_DNS_TARGET:-}" ]]; then

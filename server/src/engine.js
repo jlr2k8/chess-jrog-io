@@ -23,46 +23,59 @@ function fallbackMove(fen) {
 
 function runStockfish(fen, depth) {
   return new Promise((resolve, reject) => {
-    let bestMove = "";
-    let stderr = "";
+    let sawReady = false;
+    let settled = false;
 
-    const proc = spawn(STOCKFISH_PATH, [], { stdio: ["pipe", "pipe", "pipe"] });
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      fn(value);
+    };
 
+    const proc = spawn(STOCKFISH_PATH, []);
     const timeout = setTimeout(() => {
       proc.kill();
-      reject(new Error("Stockfish timed out"));
-    }, 15000);
-
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
+      finish(reject, new Error("Stockfish timed out"));
+    }, 30000);
 
     proc.stdout.on("data", (chunk) => {
-      const lines = chunk.toString().split("\n");
-      for (const line of lines) {
-        const match = line.match(/^bestmove\s+(\S+)/);
-        if (match) bestMove = match[1];
+      for (const line of chunk.toString().split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed === "readyok") sawReady = true;
+        if (trimmed.startsWith("bestmove ")) {
+          const move = trimmed.split(/\s+/)[1];
+          if (move && move !== "(none)") {
+            proc.kill();
+            finish(resolve, move);
+          }
+        }
       }
     });
 
+    proc.stderr.on("data", () => {});
+
     proc.on("error", (err) => {
-      clearTimeout(timeout);
-      reject(err);
+      finish(reject, err);
     });
 
     proc.on("close", (code) => {
-      clearTimeout(timeout);
-      if (bestMove && bestMove !== "(none)") {
-        resolve(bestMove);
-        return;
-      }
-      reject(new Error(stderr || `Stockfish exited ${code}`));
+      if (!settled) finish(reject, new Error(`Stockfish exited ${code}`));
     });
 
-    proc.stdin.write("uci\n");
-    proc.stdin.write("isready\n");
-    proc.stdin.write(`position fen ${fen}\n`);
-    proc.stdin.write(`go depth ${depth}\n`);
+    const send = (cmd) => {
+      proc.stdin.write(`${cmd}\n`);
+    };
+
+    send("uci");
+    send("isready");
+
+    const waitForReady = setInterval(() => {
+      if (!sawReady) return;
+      clearInterval(waitForReady);
+      send(`position fen ${fen}`);
+      send(`go depth ${depth}`);
+    }, 10);
   });
 }
 
