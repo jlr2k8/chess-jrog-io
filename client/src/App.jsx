@@ -403,7 +403,7 @@ export default function App() {
         <div>
           <p className="eyebrow">chess.jrog.io</p>
           <h1>Chess (Beta)</h1>
-          <p className="lede">Play white against the computer.</p>
+          <p className="lede">Play chess against the computer.</p>
         </div>
         <div className="header-actions">
           {error ? (
