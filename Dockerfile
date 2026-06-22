@@ -7,6 +7,7 @@ COPY server/package.json server/
 RUN npm ci
 
 COPY client client/
+COPY shared shared/
 RUN npm run build -w client
 
 FROM node:22-bookworm-slim AS final
@@ -23,6 +24,7 @@ COPY package.json package-lock.json ./
 COPY client/package.json client/
 COPY server/package.json server/
 COPY server server/
+COPY shared shared/
 COPY --from=build /app/client/dist client/dist
 
 RUN npm ci --omit=dev
