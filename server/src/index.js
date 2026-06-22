@@ -3,6 +3,7 @@ import express from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_DIFFICULTY, isValidDifficulty } from "../../shared/difficulty.js";
 import { getComputerMove } from "./engine.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,14 +30,16 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.post("/api/move", async (req, res) => {
-  const { fen } = req.body ?? {};
+  const { fen, difficulty } = req.body ?? {};
   if (!fen || typeof fen !== "string") {
     res.status(400).json({ error: "Missing fen." });
     return;
   }
 
+  const difficultyId = isValidDifficulty(difficulty) ? difficulty : DEFAULT_DIFFICULTY;
+
   try {
-    const result = await getComputerMove(fen);
+    const result = await getComputerMove(fen, difficultyId);
     if (!result) {
       res.status(400).json({ error: "No legal moves." });
       return;

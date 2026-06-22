@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
+import {
+  DEFAULT_DIFFICULTY,
+  DIFFICULTY_IDS,
+  DIFFICULTY_LEVELS,
+} from "../../shared/difficulty.js";
 import "./App.css";
 
 const MOVE_ANIMATION_MS = 500;
@@ -50,10 +55,12 @@ export default function App() {
   const boardPanelRef = useRef(null);
   const [boardWidth, setBoardWidth] = useState(480);
   const [boardRevision, setBoardRevision] = useState(0);
+  const [difficulty, setDifficulty] = useState(DEFAULT_DIFFICULTY);
   const playerColor = "w";
 
   const fen = game.fen();
   const history = game.history();
+  const canChangeDifficulty = history.length === 0 && !thinking;
   const takebackHint = useMemo(() => {
     if (thinking || game.isGameOver() || game.turn() === playerColor) return null;
 
@@ -123,7 +130,7 @@ export default function App() {
   }, [clearComputerMoveTimer]);
 
   const requestComputerMove = useCallback(
-    async (nextFen, generation) => {
+    async (nextFen, generation, difficultyId) => {
       if (generation !== moveGenerationRef.current) {
         setBoardLocked(false);
         return;
@@ -141,7 +148,7 @@ export default function App() {
         const res = await fetch("/api/move", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fen: nextFen }),
+          body: JSON.stringify({ fen: nextFen, difficulty: difficultyId }),
           signal: controller.signal,
         });
         const data = await res.json();
@@ -209,13 +216,13 @@ export default function App() {
         clearComputerMoveTimer();
         computerMoveTimerRef.current = window.setTimeout(() => {
           computerMoveTimerRef.current = null;
-          requestComputerMove(next.fen(), generation);
+          requestComputerMove(next.fen(), generation, difficulty);
         }, MOVE_ANIMATION_MS);
       } else {
         lockBoard(MOVE_ANIMATION_MS);
       }
     },
-    [clearComputerMoveTimer, lockBoard, playerColor, requestComputerMove],
+    [clearComputerMoveTimer, difficulty, lockBoard, playerColor, requestComputerMove],
   );
 
   function resetGame() {
@@ -229,7 +236,7 @@ export default function App() {
 
   function retryComputerMove() {
     if (pendingFenRef.current) {
-      requestComputerMove(pendingFenRef.current, moveGenerationRef.current);
+      requestComputerMove(pendingFenRef.current, moveGenerationRef.current, difficulty);
     }
   }
 
@@ -352,7 +359,7 @@ export default function App() {
       <header className="header">
         <div>
           <p className="eyebrow">chess.jrog.io</p>
-          <h1>Chess</h1>
+          <h1>Chess (Beta)</h1>
           <p className="lede">Play white against the computer.</p>
         </div>
         <div className="header-actions">
@@ -400,6 +407,27 @@ export default function App() {
         </div>
 
         <aside className="sidebar">
+          <div className="card">
+            <h2>Difficulty</h2>
+            <div className="difficulty-options" role="group" aria-label="Computer difficulty">
+              {DIFFICULTY_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`difficulty-btn${difficulty === id ? " is-active" : ""}`}
+                  onClick={() => setDifficulty(id)}
+                  disabled={!canChangeDifficulty}
+                  aria-pressed={difficulty === id}
+                >
+                  {DIFFICULTY_LEVELS[id].label}
+                </button>
+              ))}
+            </div>
+            {!canChangeDifficulty ? (
+              <p className="difficulty-note muted">Change before the first move or start a new game.</p>
+            ) : null}
+          </div>
+
           <div className="card">
             <h2>Status</h2>
             <p className={`status${error ? " status-error" : ""}`}>{status}</p>
