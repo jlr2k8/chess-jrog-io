@@ -9,6 +9,11 @@ import {
 import "./App.css";
 
 const MOVE_ANIMATION_MS = 500;
+const COLOR_PREFERENCES = [
+  { id: "white", label: "White" },
+  { id: "black", label: "Black" },
+  { id: "random", label: "Random" },
+];
 
 function cloneGame(chess) {
   const copy = new Chess();
@@ -56,7 +61,8 @@ export default function App() {
   const [boardWidth, setBoardWidth] = useState(480);
   const [boardRevision, setBoardRevision] = useState(0);
   const [difficulty, setDifficulty] = useState(DEFAULT_DIFFICULTY);
-  const playerColor = "w";
+  const [playerColor, setPlayerColor] = useState("w");
+  const [newGameModalOpen, setNewGameModalOpen] = useState(false);
 
   const fen = game.fen();
   const history = game.history();
@@ -94,6 +100,17 @@ export default function App() {
       if (computerMoveTimerRef.current) window.clearTimeout(computerMoveTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!newGameModalOpen) return;
+
+    function onKeyDown(event) {
+      if (event.key === "Escape") setNewGameModalOpen(false);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [newGameModalOpen]);
 
   useEffect(() => {
     const el = boardPanelRef.current;
@@ -200,6 +217,20 @@ export default function App() {
     [lockBoard],
   );
 
+  const scheduleComputerMove = useCallback(
+    (nextFen, generation, difficultyId) => {
+      setBoardLocked(true);
+      if (lockTimerRef.current) window.clearTimeout(lockTimerRef.current);
+      lockTimerRef.current = null;
+      clearComputerMoveTimer();
+      computerMoveTimerRef.current = window.setTimeout(() => {
+        computerMoveTimerRef.current = null;
+        requestComputerMove(nextFen, generation, difficultyId);
+      }, MOVE_ANIMATION_MS);
+    },
+    [clearComputerMoveTimer, requestComputerMove],
+  );
+
   const applyPlayerMove = useCallback(
     (next) => {
       const generation = moveGenerationRef.current;
@@ -209,29 +240,41 @@ export default function App() {
 
       const needsComputer = !next.isGameOver() && next.turn() !== playerColor;
       if (needsComputer) {
-        // Stay locked through the 500ms pause and the computer's reply/animation.
-        setBoardLocked(true);
-        if (lockTimerRef.current) window.clearTimeout(lockTimerRef.current);
-        lockTimerRef.current = null;
-        clearComputerMoveTimer();
-        computerMoveTimerRef.current = window.setTimeout(() => {
-          computerMoveTimerRef.current = null;
-          requestComputerMove(next.fen(), generation, difficulty);
-        }, MOVE_ANIMATION_MS);
+        scheduleComputerMove(next.fen(), generation, difficulty);
       } else {
         lockBoard(MOVE_ANIMATION_MS);
       }
     },
-    [clearComputerMoveTimer, difficulty, lockBoard, playerColor, requestComputerMove],
+    [difficulty, lockBoard, playerColor, scheduleComputerMove],
   );
 
-  function resetGame() {
+  function resetGame(preference) {
     cancelComputerRequest();
     if (lockTimerRef.current) window.clearTimeout(lockTimerRef.current);
     setBoardLocked(false);
-    setGame(new Chess());
+
+    let nextPlayerColor = "w";
+    if (preference === "black") {
+      nextPlayerColor = "b";
+    } else if (preference === "random") {
+      nextPlayerColor = Math.random() < 0.5 ? "w" : "b";
+    }
+    setPlayerColor(nextPlayerColor);
+    setBoardRevision((revision) => revision + 1);
+
+    const nextGame = new Chess();
+    setGame(nextGame);
     setMoveFrom("");
     setError("");
+
+    if (nextPlayerColor === "b") {
+      scheduleComputerMove(nextGame.fen(), moveGenerationRef.current, difficulty);
+    }
+  }
+
+  function startNewGame(preference) {
+    setNewGameModalOpen(false);
+    resetGame(preference);
   }
 
   function retryComputerMove() {
@@ -368,7 +411,12 @@ export default function App() {
               Retry
             </button>
           ) : null}
-          <button type="button" className="reset" onClick={resetGame} disabled={thinking}>
+          <button
+            type="button"
+            className="reset"
+            onClick={() => setNewGameModalOpen(true)}
+            disabled={thinking}
+          >
             New game
           </button>
         </div>
@@ -385,7 +433,7 @@ export default function App() {
               onPieceDrop={onPieceDrop}
               onSquareClick={onSquareClick}
               customSquareStyles={customSquareStyles}
-              boardOrientation="white"
+              boardOrientation={playerColor === "w" ? "white" : "black"}
               animationDuration={MOVE_ANIMATION_MS}
               arePiecesDraggable={canInteract}
               autoPromoteToQueen
@@ -451,6 +499,37 @@ export default function App() {
           </div>
         </aside>
       </main>
+
+      {newGameModalOpen ? (
+        <div
+          className="modal-backdrop"
+          onClick={() => setNewGameModalOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-game-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="new-game-title">New game</h2>
+            <p className="modal-lede muted">Choose your color.</p>
+            <div className="difficulty-options" role="group" aria-label="Your color">
+              {COLOR_PREFERENCES.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="difficulty-btn"
+                  onClick={() => startNewGame(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
