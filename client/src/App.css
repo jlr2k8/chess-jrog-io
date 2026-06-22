@@ -65,20 +65,59 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 560px) minmax(240px, 1fr);
+  grid-template-columns: minmax(280px, 560px) minmax(240px, 1fr);
   gap: 1.5rem;
   align-items: start;
 }
 
+.board-column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 280px;
+  max-width: 560px;
+}
+
 .board-panel {
   width: 100%;
-  max-width: 560px;
   padding: 1rem;
   border-radius: 1.25rem;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-  overflow: hidden;
+}
+
+.undo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  font: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.undo-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.undo-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.undo-btn-icon {
+  font-size: 1.1rem;
+  line-height: 1;
 }
 
 .sidebar {
@@ -109,11 +148,25 @@
 
 .move-list {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: 0;
+  list-style: none;
   max-height: 280px;
   overflow: auto;
   display: grid;
   gap: 0.35rem;
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.move-number {
+  color: #9aa3b2;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
 }
 
 .muted,

@@ -10,13 +10,14 @@ npm install
 npm start
 ```
 
-- **Full app:** http://127.0.0.1:3001 (builds client + serves board + API)
+- **Full app:** http://localhost:3001 (builds client + serves board + API)
+- On WSL, use `localhost:3001` from Windows — the server binds to all interfaces.
 
 Hot reload during development:
 
 ```bash
 npm run dev
-# Board UI: http://127.0.0.1:5173  (API proxied to :3001)
+# Board UI: http://localhost:5173  (API proxied to :3001)
 ```
 
 ## Deploy
