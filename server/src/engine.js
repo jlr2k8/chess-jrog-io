@@ -13,7 +13,7 @@ function scoreFallbackMove(move, difficultyId) {
   return score;
 }
 
-function fallbackMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
+export function fallbackMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
   const game = new Chess(fen);
   const moves = game.moves({ verbose: true });
   if (moves.length === 0) return null;
@@ -30,7 +30,7 @@ function fallbackMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
   return scored[0].move;
 }
 
-class StockfishEngine {
+export class StockfishEngine {
   constructor() {
     this.proc = null;
     this.ready = false;

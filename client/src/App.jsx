@@ -6,6 +6,7 @@ import {
   DIFFICULTY_IDS,
   DIFFICULTY_LEVELS,
 } from "../../shared/difficulty.js";
+import { cloneGame, formatMoveList, statusMessage, undoGame } from "./gameUtils.js";
 import "./App.css";
 
 const MOVE_ANIMATION_MS = 500;
@@ -14,37 +15,6 @@ const COLOR_PREFERENCES = [
   { id: "black", label: "Black" },
   { id: "random", label: "Random" },
 ];
-
-function cloneGame(chess) {
-  const copy = new Chess();
-  copy.loadPgn(chess.pgn());
-  return copy;
-}
-
-function statusMessage(game, side, thinking, error, takebackHint) {
-  if (error) return error;
-  if (thinking) return "Computer is thinking…";
-  if (takebackHint) return takebackHint;
-  if (game.isCheckmate()) {
-    return game.turn() === side ? "Checkmate — you lose." : "Checkmate — you win!";
-  }
-  if (game.isStalemate()) return "Stalemate.";
-  if (game.isDraw()) return "Draw.";
-  if (game.isCheck()) return "Check!";
-  return game.turn() === side ? "Your move." : "Computer to move.";
-}
-
-function formatMoveList(history) {
-  const rows = [];
-  for (let i = 0; i < history.length; i += 2) {
-    rows.push({
-      number: Math.floor(i / 2) + 1,
-      white: history[i] ?? "",
-      black: history[i + 1] ?? "",
-    });
-  }
-  return rows;
-}
 
 export default function App() {
   const [game, setGame] = useState(() => new Chess());
@@ -296,15 +266,8 @@ export default function App() {
     setBoardLocked(false);
     moveGenerationRef.current += 1;
 
-    const next = cloneGame(game);
-    const verbose = game.history({ verbose: true });
-    const removed = verbose[verbose.length - 1];
-    if (!next.undo()) return;
-
-    // Vs computer: rewinding the computer's reply also rewinds your move so you can play again.
-    if (removed?.color !== playerColor && next.history().length > 0) {
-      next.undo();
-    }
+    const next = undoGame(game, playerColor);
+    if (!next) return;
 
     setBoardRevision((revision) => revision + 1);
     setGame(next);

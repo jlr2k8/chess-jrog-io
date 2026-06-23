@@ -1,0 +1,81 @@
+import cors from "cors";
+import express from "express";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { DEFAULT_DIFFICULTY, isValidDifficulty } from "../../shared/difficulty.js";
+import { getComputerMove } from "./engine.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+export function createApp() {
+  const app = express();
+  const port = Number(process.env.PORT || 3001);
+  const isProduction = process.env.NODE_ENV === "production";
+  const clientDist = path.resolve(__dirname, "../../client/dist");
+  const clientIndex = path.join(clientDist, "index.html");
+  const hasClientBuild = fs.existsSync(clientIndex);
+  const clientDevUrl = process.env.CLIENT_DEV_URL || "http://127.0.0.1:5173";
+
+  app.use(cors());
+  app.use(express.json());
+
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      ok: true,
+      service: "chess.jrog.io",
+      phase: "board-ui",
+    });
+  });
+
+  app.post("/api/move", async (req, res) => {
+    const { fen, difficulty } = req.body ?? {};
+    if (!fen || typeof fen !== "string") {
+      res.status(400).json({ error: "Missing fen." });
+      return;
+    }
+
+    const difficultyId = isValidDifficulty(difficulty) ? difficulty : DEFAULT_DIFFICULTY;
+
+    try {
+      const result = await getComputerMove(fen, difficultyId);
+      if (!result) {
+        res.status(400).json({ error: "No legal moves." });
+        return;
+      }
+
+      res.json({
+        from: result.move.from,
+        to: result.move.to,
+        san: result.move.san,
+        promotion: result.move.promotion,
+        fen: result.fen,
+        engine: result.engine,
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message || "Engine error." });
+    }
+  });
+
+  if (isProduction || hasClientBuild) {
+    app.use(express.static(clientDist));
+    app.get(/.*/, (_req, res) => {
+      res.sendFile(clientIndex);
+    });
+  } else {
+    app.get("/", (_req, res) => {
+      res.type("html").send(`<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8"><title>chess.jrog.io</title></head>
+  <body style="font-family: system-ui, sans-serif; padding: 2rem;">
+    <h1>Chess dev server</h1>
+    <p>API is running on port ${port}. Build the client with <code>npm run build -w client</code>, or run <code>npm run dev</code> from the repo root.</p>
+    <p>Hot reload UI: <a href="${clientDevUrl}">${clientDevUrl}</a></p>
+  </body>
+</html>`);
+    });
+  }
+
+  return app;
+}
