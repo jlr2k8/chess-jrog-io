@@ -2,7 +2,7 @@
   "name": "chess-net",
   "private": true,
   "version": "0.1.0",
-  "description": "chess.jrog.io — play chess against the computer",
+  "description": "chess.jrog.io - play chess against the computer",
   "workspaces": [
     "client",
     "server"

@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  CI/CD for chess.jrog.io — GitHub (main) → CodeBuild (Docker/ECR) → App Runner auto-deploy on :latest.
+  CI/CD for chess.jrog.io - GitHub (main) → CodeBuild (Docker/ECR) → App Runner auto-deploy on :latest.
 
 Parameters:
   GitHubOwner:

@@ -10,6 +10,7 @@ function scoreFallbackMove(move, difficultyId) {
   if (move.captured) score += 10;
   if (move.san.includes("+")) score += 3;
   if (["d4", "d5", "e4", "e5", "c4", "c5"].includes(move.to)) score += 1;
+  
   return score;
 }
 
@@ -68,9 +69,12 @@ export class StockfishEngine {
 
     for (const line of lines) {
       const trimmed = line.trim();
+      
       if (trimmed === "readyok") this.ready = true;
+      
       if (trimmed.startsWith("bestmove ")) {
         const move = trimmed.split(/\s+/)[1];
+        
         if (this.current && move && move !== "(none)") {
           this.finishCurrent(move);
         }
@@ -140,6 +144,7 @@ export class StockfishEngine {
 
   bestMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
     const difficulty = getDifficulty(difficultyId);
+    
     return new Promise((resolve, reject) => {
       this.queue.push({ fen, difficulty, resolve, reject, timer: null });
       this.pump();
@@ -161,13 +166,17 @@ export async function getComputerMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
     const to = uci.slice(2, 4);
     const promotion = uci.length > 4 ? uci[4] : undefined;
     const move = game.move({ from, to, promotion });
+    
     if (!move) throw new Error(`Illegal engine move: ${uci}`);
+    
     return { move, fen: game.fen(), engine: "stockfish", difficulty: difficultyId };
   } catch {
     const game = new Chess(fen);
     const move = fallbackMove(fen, difficultyId);
+    
     if (!move) return null;
     game.move(move);
+    
     return { move, fen: game.fen(), engine: "fallback", difficulty: difficultyId };
   }
 }

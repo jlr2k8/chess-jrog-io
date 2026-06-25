@@ -11,7 +11,7 @@ export function statusMessage(game, side, thinking, error, takebackHint) {
   if (thinking) return "Computer is thinking…";
   if (takebackHint) return takebackHint;
   if (game.isCheckmate()) {
-    return game.turn() === side ? "Checkmate — you lose." : "Checkmate — you win!";
+    return game.turn() === side ? "Checkmate - you lose." : "Checkmate - you win!";
   }
   if (game.isStalemate()) return "Stalemate.";
   if (game.isDraw()) return "Draw.";

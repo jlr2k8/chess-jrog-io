@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  chess.jrog.io — Node/React chess app on App Runner with ECR and custom domain DNS.
+  chess.jrog.io - Node/React chess app on App Runner with ECR and custom domain DNS.
 
 Parameters:
   HostedZoneId:

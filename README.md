@@ -1,6 +1,6 @@
 # chess.jrog.io
 
-Play chess against the computer — React board + Node/Stockfish on App Runner.
+Play chess against the computer - React board + Node/Stockfish on App Runner.
 
 ## Quick start (local)
 
@@ -11,7 +11,7 @@ npm start
 ```
 
 - **Full app:** http://localhost:3001 (builds client + serves board + API)
-- On WSL, use `localhost:3001` from Windows — the server binds to all interfaces.
+- On WSL, use `localhost:3001` from Windows - the server binds to all interfaces.
 
 Hot reload during development:
 

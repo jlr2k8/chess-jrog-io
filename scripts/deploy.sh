@@ -39,7 +39,7 @@ stack_param() {
 if [[ "${PUSH_ONLY:-}" == "1" ]]; then
   REPO_URI="$(stack_output EcrRepositoryUri)"
   if [[ -z "$REPO_URI" || "$REPO_URI" == "None" ]]; then
-    echo "ERROR: stack $STACK not found — run full deploy first"
+    echo "ERROR: stack $STACK not found - run full deploy first"
     exit 1
   fi
 else
@@ -47,7 +47,7 @@ else
   DNS_TARGET="$(stack_param AppRunnerCustomDomainDnsTarget)"
 
   if [[ -z "$SERVICE_ARN" || "$SERVICE_ARN" == "None" ]]; then
-    echo "==> Phase 1: stack (ECR, IAM) — DeployAppRunner=false"
+    echo "==> Phase 1: stack (ECR, IAM) - DeployAppRunner=false"
     aws cloudformation deploy \
       --region "$REGION" \
       --stack-name "$STACK" \
@@ -56,7 +56,7 @@ else
       --capabilities CAPABILITY_NAMED_IAM \
       --no-fail-on-empty-changeset
   else
-    echo "==> App Runner already deployed — keeping service on stack update"
+    echo "==> App Runner already deployed - keeping service on stack update"
     EXTRA=()
     if [[ -n "$DNS_TARGET" && "$DNS_TARGET" != "None" ]]; then
       EXTRA+=("AppRunnerCustomDomainDnsTarget=$DNS_TARGET")
@@ -82,7 +82,7 @@ docker build -t "$REPO_URI:$IMAGE_TAG" .
 docker push "$REPO_URI:$IMAGE_TAG"
 
 if [[ "${PUSH_ONLY:-}" == "1" ]]; then
-  echo "==> Push only — App Runner auto-deploys :latest"
+  echo "==> Push only - App Runner auto-deploys :latest"
   exit 0
 fi
 

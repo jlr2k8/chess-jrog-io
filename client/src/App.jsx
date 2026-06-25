@@ -171,8 +171,8 @@ export default function App() {
         }
         const message =
           err.message === "Computer move failed."
-            ? "Computer move failed — tap Retry."
-            : err.message || "Computer move failed — tap Retry.";
+            ? "Computer move failed - tap Retry."
+            : err.message || "Computer move failed - tap Retry.";
         setError(message);
         setBoardLocked(false);
         console.error(err);

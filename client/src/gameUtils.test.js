@@ -12,7 +12,7 @@ describe("statusMessage", () => {
 
   it("describes game-over and in-progress states", () => {
     const game = new Chess("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3");
-    expect(statusMessage(game, "w", false, "", null)).toBe("Checkmate — you lose.");
+    expect(statusMessage(game, "w", false, "", null)).toBe("Checkmate - you lose.");
 
     const inProgress = new Chess();
     expect(statusMessage(inProgress, "w", false, "", null)).toBe("Your move.");
