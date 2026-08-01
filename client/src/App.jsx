@@ -28,15 +28,11 @@ export default function App() {
   const computerMoveTimerRef = useRef(null);
   const moveGenerationRef = useRef(0);
   const boardPanelRef = useRef(null);
-  const dropAcceptedRef = useRef(false);
   const [boardWidth, setBoardWidth] = useState(480);
   const [boardRevision, setBoardRevision] = useState(0);
   const [difficulty, setDifficulty] = useState(DEFAULT_DIFFICULTY);
   const [playerColor, setPlayerColor] = useState("w");
   const [newGameModalOpen, setNewGameModalOpen] = useState(false);
-  // TouchBackend drag leaves pieces floating mid-board and stalls the game.
-  // Prefer tap-to-move on coarse/touch pointers.
-  const [dragEnabled, setDragEnabled] = useState(true);
 
   const fen = game.fen();
   const history = game.history();
@@ -99,16 +95,6 @@ export default function App() {
     const observer = new ResizeObserver(updateWidth);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const coarse = window.matchMedia("(pointer: coarse)");
-    const sync = () => {
-      setDragEnabled(!(coarse.matches || "ontouchstart" in window));
-    };
-    sync();
-    coarse.addEventListener("change", sync);
-    return () => coarse.removeEventListener("change", sync);
   }, []);
 
   const clearComputerMoveTimer = useCallback(() => {
@@ -322,70 +308,6 @@ export default function App() {
     setMoveFrom("");
   }
 
-  function syncBoardVisual() {
-    // Remount clears stuck TouchBackend drag previews (floating pieces).
-    setBoardRevision((revision) => revision + 1);
-  }
-
-  function rejectDrop() {
-    // react-chessboard keeps its internal board when `position` (FEN) is unchanged,
-    // so illegal drops can leave pieces stuck. Remount to snap back.
-    dropAcceptedRef.current = false;
-    syncBoardVisual();
-    return false;
-  }
-
-  function onPieceDragBegin() {
-    dropAcceptedRef.current = false;
-  }
-
-  function onPieceDragEnd() {
-    setMoveFrom("");
-    // Only remount when the drag did not produce a legal move — otherwise we
-    // wipe the normal move animation after a successful drop.
-    if (!dropAcceptedRef.current) {
-      syncBoardVisual();
-    }
-    dropAcceptedRef.current = false;
-  }
-
-  function onPieceDrop(sourceSquare, targetSquare, _piece) {
-    if (thinking || boardLocked || game.turn() !== playerColor || game.isGameOver()) {
-      return rejectDrop();
-    }
-
-    if (sourceSquare === targetSquare) {
-      setMoveFrom("");
-      return rejectDrop();
-    }
-
-    const targetPiece = game.get(targetSquare);
-    if (targetPiece?.color === playerColor) {
-      setMoveFrom(targetSquare);
-      return rejectDrop();
-    }
-
-    const next = cloneGame(game);
-    const move = next.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: "q",
-    });
-
-    if (!move) return rejectDrop();
-
-    dropAcceptedRef.current = true;
-    applyPlayerMove(next);
-    return true;
-  }
-
-  function isDraggablePiece({ piece }) {
-    if (!dragEnabled || thinking || boardLocked || game.isGameOver() || game.turn() !== playerColor) {
-      return false;
-    }
-    return piece?.[0] === playerColor;
-  }
-
   const customSquareStyles = useMemo(() => {
     if (!moveFrom) return {};
 
@@ -408,21 +330,13 @@ export default function App() {
     return styles;
   }, [game, moveFrom]);
 
-  const canInteract =
-    !thinking && !boardLocked && !game.isGameOver() && game.turn() === playerColor;
-  const canDrag = canInteract && dragEnabled;
-
   return (
     <div className="app">
       <header className="header">
         <div>
           <p className="eyebrow">chess.jrog.io</p>
           <h1>Chess (Beta)</h1>
-          <p className="lede">
-            {dragEnabled
-              ? "Play chess against the computer."
-              : "Play chess against the computer. Tap a piece, then tap a square."}
-          </p>
+          <p className="lede">Play chess against the computer. Tap a piece, then tap a square.</p>
         </div>
         <div className="header-actions">
           {error ? (
@@ -449,15 +363,11 @@ export default function App() {
               id="main-board"
               position={fen}
               boardWidth={boardWidth}
-              onPieceDrop={onPieceDrop}
-              onPieceDragBegin={onPieceDragBegin}
-              onPieceDragEnd={onPieceDragEnd}
               onSquareClick={onSquareClick}
-              isDraggablePiece={isDraggablePiece}
               customSquareStyles={customSquareStyles}
               boardOrientation={playerColor === "w" ? "white" : "black"}
               animationDuration={MOVE_ANIMATION_MS}
-              arePiecesDraggable={canDrag}
+              arePiecesDraggable={false}
               autoPromoteToQueen
             />
           </section>

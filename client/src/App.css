@@ -131,6 +131,17 @@
   user-select: none;
 }
 
+/* Kill react-dnd and native browser piece dragging (mobile floating ghosts). */
+.board-panel [data-piece],
+.board-panel svg,
+.board-panel img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: none;
+}
+
 .board-panel [data-square] {
   touch-action: manipulation;
 }
