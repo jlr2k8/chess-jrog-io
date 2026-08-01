@@ -106,10 +106,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - cloudformation:DescribeStacks
-                  - cloudformation:CreateChangeSet
-                  - cloudformation:ExecuteChangeSet
-                  - cloudformation:DescribeChangeSet
-                  - cloudformation:GetTemplate
                 Resource: !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppStackName}/*"
               - Effect: Allow
                 Action:
@@ -123,10 +119,6 @@ Resources:
                   - route53:ChangeResourceRecordSets
                   - route53:ListResourceRecordSets
                 Resource: !Sub "arn:aws:route53:::hostedzone/${HostedZoneId}"
-              - Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource: !Sub "arn:aws:iam::${AWS::AccountId}:role/${AppStackName}-apprunner-ecr-access"
 
   CodePipelineRole:
     Type: AWS::IAM::Role

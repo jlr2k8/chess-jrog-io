@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Link chess.jrog.io on App Runner, add ACM validation CNAMEs, update Route53.
+# Keep DOMAIN_NAME aligned with the live App Runner service.
+# Safe to run on every CI build - updates Route53 only; does not redeploy the app stack.
 set -euo pipefail
 
 REGION="${AWS_REGION:-us-west-2}"
@@ -26,34 +27,23 @@ DOMAIN_STATUS="$(aws apprunner describe-custom-domains \
   --query "CustomDomains[?DomainName=='$DOMAIN'].Status | [0]" \
   --output text 2>/dev/null || true)"
 
-DNS_TARGET=""
-
-if [[ "$DOMAIN_STATUS" == "None" || -z "$DOMAIN_STATUS" ]]; then
-  echo "==> Associate custom domain $DOMAIN (not linked)"
+if [[ "$DOMAIN_STATUS" != "active" ]]; then
+  echo "==> Associate custom domain $DOMAIN (was: ${DOMAIN_STATUS:-not linked})"
   ASSOC="$(aws apprunner associate-custom-domain \
     --region "$REGION" \
     --service-arn "$SERVICE_ARN" \
     --domain-name "$DOMAIN" \
     --no-enable-www-subdomain)"
   DNS_TARGET="$(echo "$ASSOC" | jq -r '.DNSTarget')"
-else
-  echo "==> Custom domain $DOMAIN status: $DOMAIN_STATUS"
-  DNS_TARGET="$(aws apprunner describe-custom-domains \
-    --region "$REGION" \
-    --service-arn "$SERVICE_ARN" \
-    --query 'DNSTarget' \
-    --output text)"
-fi
 
-if [[ "$DOMAIN_STATUS" != "active" ]]; then
   echo "==> ACM validation CNAMEs (if any)"
   RECORDS="$(aws apprunner describe-custom-domains \
     --region "$REGION" \
     --service-arn "$SERVICE_ARN" \
-    --query "CustomDomains[?DomainName=='$DOMAIN'].CertificateValidationRecords | [0]" \
+    --query 'CustomDomains[0].CertificateValidationRecords' \
     --output json)"
 
-  CHANGES="$(echo "$RECORDS" | jq -c '[.[]? | {
+  CHANGES="$(echo "$RECORDS" | jq -c '[.[] | {
     Action: "UPSERT",
     ResourceRecordSet: {
       Name: .Name,
@@ -63,7 +53,7 @@ if [[ "$DOMAIN_STATUS" != "active" ]]; then
     }
   }]')"
 
-  if [[ "$CHANGES" != "[]" && "$CHANGES" != "null" && -n "$CHANGES" ]]; then
+  if [[ "$CHANGES" != "[]" && "$CHANGES" != "null" ]]; then
     aws route53 change-resource-record-sets \
       --hosted-zone-id "$ZONE_ID" \
       --change-batch "$(jq -n --argjson c "$CHANGES" '{Changes: $c}')"
@@ -113,23 +103,5 @@ else
         }]
       }')"
 fi
-
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ECR_REPO="${ECR_REPOSITORY_NAME:-chess-jrog-io}"
-TEMPLATE="$ROOT/infra/cloudformation/template.yaml"
-
-echo "==> Persist DnsTarget on app stack (CloudFormation)"
-aws cloudformation deploy \
-  --region "$REGION" \
-  --stack-name "$STACK" \
-  --template-file "$TEMPLATE" \
-  --parameter-overrides \
-    "HostedZoneId=$ZONE_ID" \
-    "DomainName=$DOMAIN" \
-    "EcrRepositoryName=$ECR_REPO" \
-    "DeployAppRunner=true" \
-    "AppRunnerCustomDomainDnsTarget=$DNS_TARGET" \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --no-fail-on-empty-changeset
 
 echo "==> Custom domain sync complete"
