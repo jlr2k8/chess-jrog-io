@@ -1,25 +1,37 @@
 export const DIFFICULTY_LEVELS = {
-  easy: {
-    id: "easy",
-    label: "Easy",
-    skillLevel: 5,
-    movetimeMs: 600,
+  beginner: {
+    id: "beginner",
+    label: "Beginner",
+    skillLevel: 2,
+    movetimeMs: 400,
   },
-  middle: {
-    id: "middle",
-    label: "Middle",
-    skillLevel: 12,
-    movetimeMs: 1500,
+  casual: {
+    id: "casual",
+    label: "Casual",
+    skillLevel: 6,
+    movetimeMs: 700,
   },
-  hard: {
-    id: "hard",
-    label: "Hard",
+  intermediate: {
+    id: "intermediate",
+    label: "Intermediate",
+    skillLevel: 10,
+    movetimeMs: 1200,
+  },
+  advanced: {
+    id: "advanced",
+    label: "Advanced",
+    skillLevel: 14,
+    movetimeMs: 1800,
+  },
+  expert: {
+    id: "expert",
+    label: "Expert",
     skillLevel: 20,
     movetimeMs: 2500,
   },
 };
 
-export const DEFAULT_DIFFICULTY = "middle";
+export const DEFAULT_DIFFICULTY = "casual";
 
 export const DIFFICULTY_IDS = Object.keys(DIFFICULTY_LEVELS);
 

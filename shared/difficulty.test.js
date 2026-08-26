@@ -8,8 +8,8 @@ import {
 
 describe("getDifficulty", () => {
   it("returns the config for a known difficulty id", () => {
-    expect(getDifficulty("easy")).toBe(DIFFICULTY_LEVELS.easy);
-    expect(getDifficulty("hard")).toBe(DIFFICULTY_LEVELS.hard);
+    expect(getDifficulty("beginner")).toBe(DIFFICULTY_LEVELS.beginner);
+    expect(getDifficulty("expert")).toBe(DIFFICULTY_LEVELS.expert);
   });
 
   it("falls back to the default for unknown ids", () => {
@@ -20,9 +20,9 @@ describe("getDifficulty", () => {
 
 describe("isValidDifficulty", () => {
   it("accepts known difficulty strings", () => {
-    expect(isValidDifficulty("easy")).toBe(true);
-    expect(isValidDifficulty("middle")).toBe(true);
-    expect(isValidDifficulty("hard")).toBe(true);
+    expect(isValidDifficulty("beginner")).toBe(true);
+    expect(isValidDifficulty("intermediate")).toBe(true);
+    expect(isValidDifficulty("expert")).toBe(true);
   });
 
   it("rejects non-strings and unknown ids", () => {

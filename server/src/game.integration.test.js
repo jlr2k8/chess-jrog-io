@@ -74,8 +74,9 @@ async function simulateGame(app, { difficulty, userColor, maxPlies = MAX_PLIES }
 }
 
 function testTimeoutForDifficulty(difficulty) {
-  if (difficulty === "hard") return 90_000;
-  if (difficulty === "middle") return 60_000;
+  if (difficulty === "expert") return 90_000;
+  if (difficulty === "advanced") return 75_000;
+  if (difficulty === "intermediate") return 60_000;
   return 45_000;
 }
 
@@ -107,7 +108,7 @@ describe("terminal position integration", () => {
   it("returns 400 when the side to move has no legal moves (checkmate)", async () => {
     const res = await request(app)
       .post("/api/move")
-      .send({ fen: FOOLS_MATE_FEN, difficulty: "hard" });
+      .send({ fen: FOOLS_MATE_FEN, difficulty: "expert" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("No legal moves.");
@@ -128,7 +129,7 @@ describe("terminal position integration", () => {
 
     const res = await request(app)
       .post("/api/move")
-      .send({ fen: game.fen(), difficulty: "easy" });
+      .send({ fen: game.fen(), difficulty: "beginner" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("No legal moves.");
@@ -137,7 +138,7 @@ describe("terminal position integration", () => {
   it("returns 200 for computer while legal moves exist from the starting position", async () => {
     const res = await request(app)
       .post("/api/move")
-      .send({ fen: START_FEN, difficulty: "middle" });
+      .send({ fen: START_FEN, difficulty: "intermediate" });
 
     expect(res.status).toBe(200);
 

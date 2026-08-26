@@ -5,12 +5,20 @@ import { DEFAULT_DIFFICULTY, getDifficulty } from "../../shared/difficulty.js";
 const STOCKFISH_PATH = process.env.STOCKFISH_PATH || "/usr/games/stockfish";
 const ENGINE_TIMEOUT_MS = Number(process.env.STOCKFISH_TIMEOUT_MS || 8000);
 
+const FALLBACK_POOL_SIZES = {
+  beginner: 8,
+  casual: 6,
+  intermediate: 4,
+  advanced: 2,
+  expert: 1,
+};
+
 function scoreFallbackMove(move, difficultyId) {
-  let score = difficultyId === "hard" ? 0 : Math.random();
+  let score = difficultyId === "expert" ? 0 : Math.random();
   if (move.captured) score += 10;
   if (move.san.includes("+")) score += 3;
   if (["d4", "d5", "e4", "e5", "c4", "c5"].includes(move.to)) score += 1;
-  
+
   return score;
 }
 
@@ -23,8 +31,9 @@ export function fallbackMove(fen, difficultyId = DEFAULT_DIFFICULTY) {
     .map((move) => ({ move, score: scoreFallbackMove(move, difficultyId) }))
     .sort((a, b) => b.score - a.score);
 
-  if (difficultyId === "easy") {
-    const pool = scored.slice(0, Math.min(4, scored.length));
+  const poolSize = FALLBACK_POOL_SIZES[difficultyId] ?? FALLBACK_POOL_SIZES.intermediate;
+  if (poolSize > 1) {
+    const pool = scored.slice(0, Math.min(poolSize, scored.length));
     return pool[Math.floor(Math.random() * pool.length)].move;
   }
 

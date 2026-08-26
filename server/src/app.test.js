@@ -25,21 +25,21 @@ describe("POST /api/move", () => {
     expect(res.body.error).toBe("Missing fen.");
   });
 
-  it("defaults invalid difficulty to middle", async () => {
+  it("defaults invalid difficulty to intermediate", async () => {
     const game = new Chess(START_FEN);
     game.move("e4");
     vi.mocked(getComputerMove).mockResolvedValue({
       move: { from: "e7", to: "e5", san: "e5", promotion: undefined },
       fen: "updated-fen",
       engine: "fallback",
-      difficulty: "middle",
+      difficulty: "intermediate",
     });
 
     await request(app)
       .post("/api/move")
       .send({ fen: START_FEN, difficulty: "impossible" });
 
-    expect(getComputerMove).toHaveBeenCalledWith(START_FEN, "middle");
+    expect(getComputerMove).toHaveBeenCalledWith(START_FEN, "intermediate");
   });
 
   it("returns 400 when there are no legal moves", async () => {
@@ -47,7 +47,7 @@ describe("POST /api/move", () => {
 
     const res = await request(app)
       .post("/api/move")
-      .send({ fen: FOOLS_MATE_FEN, difficulty: "easy" });
+      .send({ fen: FOOLS_MATE_FEN, difficulty: "beginner" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("No legal moves.");
@@ -60,12 +60,12 @@ describe("POST /api/move", () => {
       move: { from: "e2", to: "e4", san: "e4", promotion: undefined },
       fen: afterMove.fen(),
       engine: "stockfish",
-      difficulty: "hard",
+      difficulty: "expert",
     });
 
     const res = await request(app)
       .post("/api/move")
-      .send({ fen: START_FEN, difficulty: "hard" });
+      .send({ fen: START_FEN, difficulty: "expert" });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({

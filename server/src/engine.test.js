@@ -24,25 +24,25 @@ describe("fallbackMove", () => {
   });
 
   it("returns a legal move from the starting position", () => {
-    const move = fallbackMove(START_FEN, "hard");
+    const move = fallbackMove(START_FEN, "expert");
     const game = new Chess(START_FEN);
     expect(game.move(move)).toBeTruthy();
   });
 
   it("returns null when there are no legal moves", () => {
-    expect(fallbackMove(FOOLS_MATE_FEN, "hard")).toBeNull();
+    expect(fallbackMove(FOOLS_MATE_FEN, "expert")).toBeNull();
   });
 
-  it("prefers captures on hard difficulty", () => {
-    const move = fallbackMove(CAPTURE_FEN, "hard");
+  it("prefers captures on expert difficulty", () => {
+    const move = fallbackMove(CAPTURE_FEN, "expert");
     expect(move.from).toBe("e1");
     expect(move.to).toBe("e2");
     expect(move.captured).toBe("r");
   });
 
-  it("picks from the top pool on easy difficulty", () => {
+  it("picks from the top pool on beginner difficulty", () => {
     vi.spyOn(Math, "random").mockReturnValue(0);
-    const move = fallbackMove(START_FEN, "easy");
+    const move = fallbackMove(START_FEN, "beginner");
     const game = new Chess(START_FEN);
     expect(game.move(move)).toBeTruthy();
   });
@@ -57,7 +57,7 @@ describe("getComputerMove", () => {
   });
 
   it("uses the fallback engine when Stockfish is unavailable", async () => {
-    const resultPromise = getComputerMove(START_FEN, "middle");
+    const resultPromise = getComputerMove(START_FEN, "intermediate");
     mockProc.emit("error", new Error("Stockfish unavailable"));
 
     const result = await resultPromise;
@@ -84,18 +84,18 @@ describe("StockfishEngine", () => {
   });
 
   it("parses readyok and bestmove from stdout", async () => {
-    const movePromise = engine.bestMove(START_FEN, "middle");
+    const movePromise = engine.bestMove(START_FEN, "intermediate");
 
     mockProc.stdout.emit("data", "readyok\n");
     await vi.advanceTimersByTimeAsync(20);
     mockProc.stdout.emit("data", "bestmove e2e4\n");
 
     await expect(movePromise).resolves.toBe("e2e4");
-    expect(mockProc.stdin.write).toHaveBeenCalledWith("go movetime 1500\n");
+    expect(mockProc.stdin.write).toHaveBeenCalledWith("go movetime 1200\n");
   });
 
   it("buffers partial stdout lines across chunks", async () => {
-    const movePromise = engine.bestMove(START_FEN, "middle");
+    const movePromise = engine.bestMove(START_FEN, "intermediate");
 
     mockProc.stdout.emit("data", "ready");
     mockProc.stdout.emit("data", "ok\nbestmove d2d");
@@ -105,7 +105,7 @@ describe("StockfishEngine", () => {
   });
 
   it("rejects when the process exits before a move", async () => {
-    const movePromise = engine.bestMove(START_FEN, "middle");
+    const movePromise = engine.bestMove(START_FEN, "intermediate");
     mockProc.emit("close");
 
     await expect(movePromise).rejects.toThrow("Stockfish exited");
